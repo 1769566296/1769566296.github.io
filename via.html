@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!-- Via浏览器的自定义logo -->
+<!-- 设置网页主要语言为简体中文，有助于搜索引擎和屏幕阅读器识别 -->
+<html lang="zh-CN">
+<head>
+    <!-- 设置字符编码为 UTF-8，防止中文乱码 -->
+    <meta charset="UTF-8">
+    <!-- 视口设置：让网页在移动设备上按设备宽度 1:1 渲染，初始缩放比例为 1 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 浏览器标签页上显示的网页标题 -->
+    <title>Quark</title>
+    
+    <style>
+        /* ================= 全局样式 ================= */
+        body {
+            background-color: transparent; /* 背景设置为透明（常用于嵌入到其他应用或作为桌面壁纸） */
+            margin: 0;                     /* 清除浏览器默认的 body 外边距 */
+            height: 100vh;                 /* 高度占满整个浏览器可视区域 (100% Viewport Height) */
+            display: flex;                 /* 开启 Flexbox 弹性布局 */
+            justify-content: center;       /* 水平方向居中对齐 */
+            align-items: center;           /* 垂直方向居中对齐 */
+            overflow: hidden;              /* 隐藏超出屏幕的内容，防止出现滚动条 */
+            font-family: sans-serif;       /* 设置全局默认无衬线字体 */
+        }
+
+        /* ================= 主标题样式 ================= */
+        .gradient-text {
+            font-size: 48px;               /* 字体大小 */
+            font-weight: bold;             /* 字体加粗 */
+            /* 字体回退机制：优先使用楷体，若没有则尝试其他中文字体，最后使用衬线体 */
+            font-family: "KaiTi", "STKaiti", "AR PL UKai CN", serif; 
+            
+            /* 定义彩虹色线性渐变，方向为从左到右，末尾加上 red 用于实现无缝循环动画 */
+            background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet, red); 
+            background-size: 200% auto;    /* 背景尺寸设为 200%，留出动画滑动的空间 */
+            
+            /* 核心属性：将背景裁剪到文字形状上，实现文字渐变效果 */
+            -webkit-background-clip: text; /* 兼容 Webkit 内核浏览器 (如 Chrome/Safari) */
+            background-clip: text;         /* 标准属性 */
+            color: transparent;            /* 将文字本身颜色设为透明，让背景渐变透出来 */
+            
+            display: inline-block;         /* 转为行内块元素，以便应用 transform 动画 */
+            
+            /* 绑定两个动画：渐变流动(3秒循环) + 上下浮动(2秒循环) */
+            animation: moveGradient 3s linear infinite, floatText 2s ease-in-out infinite; 
+        }
+
+        /* ================= MC 成就提示框样式 ================= */
+        .mc-toast {
+            position: fixed;               /* 固定定位，相对于浏览器窗口，不随页面滚动 */
+            top: 20px;                     /* 距离顶部 20px */
+            right: 20px;                   /* 距离右侧 20px */
+            display: flex;                 /* 内部使用 Flex 布局，让图标和文字水平排列 */
+            align-items: center;           /* 垂直居中对齐 */
+            gap: 12px;                     /* 图标与文字之间的间距 */
+            padding: 2px 36px;            /* 内边距：上下 12px，左右 40px */
+            
+            background-color: rgba(0, 0, 0, 0.85); /* MC 经典的半透明黑底 */
+            border: 2px solid #555;        /* 灰色边框 */
+            border-left: 4px solid #ffaa00;/* 左侧加粗的橙色高亮条，模仿 MC 成就提示 */
+            color: #fff;                   /* 默认文字颜色为白色 */
+            border-radius: 4px;            /* 轻微的圆角 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* 添加阴影增加立体感 */
+            
+            /* 初始状态：完全透明，且向右平移 150% 隐藏在屏幕外 */
+            opacity: 0; 
+            transform: translateX(150%); 
+            
+            /* 过渡动画：0.5秒，使用 cubic-bezier 贝塞尔曲线实现弹性滑入效果 */
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            z-index: 1000;                 /* 确保提示框始终在最顶层 */
+        }
+
+        /* 提示框显示状态：通过 JS 动态添加此类名来触发显示 */
+        .mc-toast.show {
+            opacity: 1;                    /* 变为完全可见 */
+            transform: translateX(0);      /* 回到原始位置 */
+        }
+
+        /* 提示框左侧的 Emoji 图标 */
+        .toast-icon {
+            font-size: 24px; 
+        }
+
+        /* 提示框右侧的文字排版 */
+        .toast-content h4 {
+            margin: 0;                     /* 清除标题默认外边距 */
+            font-size: 12px;               /* 小字号 */
+            color: #ffaa00;                /* 橙色，呼应左侧高亮条 */
+            text-transform: uppercase;     /* 强制英文字母大写 */
+            letter-spacing: 1px;           /* 增加字间距，提升精致感 */
+        }
+
+        .toast-content p {
+            margin: 4px 0 0;               /* 仅保留顶部 4px 间距 */
+            font-size: 16px;               /* 成就名称字号 */
+            font-weight: bold;             /* 加粗 */
+        }
+
+        /* ================= 关键帧动画定义 ================= */
+        
+        /* 渐变流动动画：让背景位置从 0% 移动到 200%，实现彩虹流动效果 */
+        @keyframes moveGradient {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        
+        /* 文字上下浮动动画：在 0% 和 100% 时保持原位，50% 时向上移动 10px */
+        @keyframes floatText {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- MC 风格的成就提示框容器 -->
+    <div class="mc-toast" id="mcToast">
+        <!-- 左侧图标区域，默认占位，由 JS 动态替换 -->
+        <div class="toast-icon">⛅</div>
+        <!-- 右侧文字区域 -->
+        <div class="toast-content">
+            <!-- 成就类型小标题 -->
+            <h4>[完成成就]</h4>
+            <!-- 成就具体名称，默认显示“正在获取...”，由 JS 动态替换 -->
+            <p id="weatherText">正在获取...</p>
+        </div>
+    </div>
+
+    <!-- 页面中央的彩虹浮动主标题 -->
+    <div class="gradient-text">Quark</div>
+
+    <script>
+        // ================= 数据与逻辑 =================
+        
+        // 定义一个数组，存放所有可能的“成就”数据（图标 + 文本）
+        const weatherData = [
+            { icon: "🦁", text: "永恒的伙伴" },
+            { icon: "", text: "无尽成长" },
+            { icon: "🥊", text: "来较量一下" },
+            { icon: "🦁", text: "永恒的伙伴" }
+        ];
+
+        // 通过 Math.random() 生成随机索引，从数组中随机抽取一个成就
+        const randomWeather = weatherData[Math.floor(Math.random() * weatherData.length)];
+        
+        // 延迟 1 秒后执行弹窗逻辑，模拟“加载完成”或“成就触发”的延迟感
+        setTimeout(() => {
+            // 获取 DOM 元素引用
+            const toast = document.getElementById('mcToast');       // 提示框容器
+            const weatherText = document.getElementById('weatherText'); // 成就文本节点
+            const toastIcon = document.querySelector('.toast-icon');    // 图标节点
+
+            // 将随机抽取的成就数据填入对应的 DOM 元素中
+            weatherText.textContent = randomWeather.text;
+            toastIcon.textContent = randomWeather.icon;
+
+            // 为提示框添加 'show' 类，触发 CSS 中定义的滑入和显示动画
+            toast.classList.add('show');
+
+            // 再次使用 setTimeout，在 3.5 秒后自动移除 'show' 类，让提示框滑出并隐藏
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+            
+        }, 1000); // 外层延迟 1000 毫秒 (1秒)
+    </script>
+</body>
+</html>
